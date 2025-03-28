@@ -390,3 +390,12 @@ Step 11: Deep sleep (Suggested:  Command 0x10)
 		(Actual, in driver: powerDown() routine)
 		(EPD_CS) command = 0x10 data = 0x01	(deep sleep)
 
+----------------------------------------------------
+NOTE:  Conclusion for the Tamagotchi project is:
+(1) The SD card interface under the eInk display is not useful because
+    writing an interface to an entire filesystem is way too complicated
+    for a Tiny Tapeout project
+(2) The project needs nonvolatile memory for image storage, or else the
+    image data will quickly exceed the Tiny Tapeout area.
+(3) Therefore, use the SRAM + NVRAM PMOD for data storage and image
+    storage, and use the eInk display only for the eInk display.
