@@ -111,10 +111,10 @@ module tt_um_rte_eink_driver (
      * change to low values in simulation.
      */
     /* Number of bytes to transfer for the complete display.  The display
-     * is 250x122 pixels, but address space is 256x128 = 32768 bits,
-     * divided by 8 bits per byte = 4096 = hex 0x1000
+     * is 250x122 pixels, but address space is 250x128 = 32000 bits,
+     * divided by 8 bits per byte = 4000 = hex 0xfa0
      */
-    `define DISPLAY_BYTES 16'h1000
+    `define DISPLAY_BYTES 16'hfa0
     // `define DISPLAY_BYTES 16'h200		// simulation only
 
     /* Delay value used to count out 10ms for hardware reset.
@@ -271,13 +271,13 @@ module tt_um_rte_eink_driver (
 			10: data_out <= 8'h00;
 			11: data_out <= 8'h32;
 			12: data_out <= 8'h4e;	// Set X count
-			13: data_out <= 8'h01;
+			13: data_out <= 8'h00;
 			14: data_out <= 8'h4f;	// Set Y count
 			15: data_out <= 8'h00;
 			16: data_out <= 8'h00;
 			17: data_out <= 8'h44;	// Set X position
 			18: data_out <= 8'h00;
-			19: data_out <= 8'h0e;
+			19: data_out <= 8'h0f;
 			20: data_out <= 8'h45;	// Set Y position
 			21: data_out <= 8'h00;
 			22: data_out <= 8'h00;
