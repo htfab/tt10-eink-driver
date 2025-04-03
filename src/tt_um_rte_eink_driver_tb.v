@@ -17,7 +17,15 @@ module tt_um_rte_eink_driver_tb;
     wire [7:0] uo_out;
     wire [7:0] uio_out;
     wire [7:0] uio_oe;
-    wire	pwm;
+
+    /* Named signals for viewing in gtkwave */
+    wire	mosi;	// e-ink display SPI input data
+    wire	dcb;	// e-ink display command/data
+    wire	sck;	// SPI clock
+    wire	csb;	// e-ink display SPI select (sense negative)
+    wire	resetb;	// e-ink display reset (sense negative)
+
+    reg		busy;	// e-ink display busy
 
     initial begin
 	$dumpfile("tt_um_rte_eink_driver_tb.vcd");
@@ -27,6 +35,7 @@ module tt_um_rte_eink_driver_tb;
 	clk <= 0;
 	rst_n <= 0;
 	ui_in <= 0;
+	busy <= 0;
 
 	// Enable the project (this signal is unused by the project)
 	#100;
@@ -36,26 +45,28 @@ module tt_um_rte_eink_driver_tb;
 	#500;
 	rst_n <= 1;
 
-	// 2 million count = 1 wave at 500Hz
-	// Run for a while in silence
-	#4000000;
+	// Run for a few clock cycles
+	#10000;
 
-	// Apply a note
+	// Apply an input, run for a while
 	ui_in <= 1;
-	#4000000;
+	#1500000;
 
-	// Apply another note, overlapping
-	ui_in <= 5;
+	// Release the input, run for a while
+	ui_in <= 0;
+	#10000;
+	ui_in <= 2;
+	#1500000;
+
+	ui_in <= 0;
 	#10000;
 	ui_in <= 4;
-	#4000000;
+	#1500000;
 
-	// Applky another note, non-overlapping
 	ui_in <= 0;
-	#2000000;
-
-	ui_in <= 6;
-	#2000000;
+	#10000;
+	ui_in <= 8;
+	#1500000;
 
 	$finish;
     end
@@ -74,9 +85,17 @@ module tt_um_rte_eink_driver_tb;
 	.rst_n(rst_n)
     );
 
-    assign pwm = uio_out[7];	// For easier viewing in gtkwave
+    assign mosi   = uio_out[1];
+    assign dcb    = uio_out[7];
+    assign sck    = uio_out[3];
+    assign csb    = uio_out[0];
+    assign resetb = uio_out[5];
 
-    // To do: instantiate e-ink display as two SPI slave modules,
-    // one for the display and one for the SRAM.
+    assign uio_out[6] = busy;
+    assign uio_out[2] = 1'b0;
+    assign uio_out[4] = 1'b0;
+
+    // To do: instantiate e-ink display as an SPI slave module.
+    // The module will acknowledge commands and assert "busy" as needed.
 
 endmodule;

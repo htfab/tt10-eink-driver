@@ -1,8 +1,8 @@
 /*
- * tt_um_rte_sine_synth_wrapper.v
+ * tt_um_rte_eink_driver_wrapper.v
  *
  * Wrapper for Arty A7 board around the
- * TinyTapeout project tt_um_rte_sine_synth.v
+ * TinyTapeout project tt_um_rte_eink_driver.v
  *
  * What this wrapper adds:
  *
@@ -13,13 +13,13 @@
  */
 
 // Point this to the Tiny Tapeout project and uncomment
-// `include "../src/tt_um_project.v"
+`include "../src/tt_um_rte_eink_driver.v"
 
 // Note that this creates new signal name "uio_inout" which is
 // what must be connected to the eight pins in the "JB" PMOD
 // in the Arty board configuration file.
 
-module tt_generic_wrapper (
+module tt_um_rte_eink_driver_wrapper (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     inout  wire [7:0] uio_inout,// Bidirectional input and output
@@ -35,7 +35,7 @@ module tt_generic_wrapper (
 
     // Instantiate the Tiny Tapeout project
 
-    tt_um_project project (
+    tt_um_rte_eink_driver project (
 	.ui_in(ui_in),		// 8-bit input
 	.uo_out(uo_out),	// 8-bit output
 	.uio_in(uio_in),	// 8-bit bidirectional (in)
@@ -49,9 +49,9 @@ module tt_generic_wrapper (
     generate
         genvar i;
         for (i = 0; i < 8; i = i + 1)
-            assign uio_inout[i] = uio_oe[i] ? uio_in[i] : 1'bz;
+            assign uio_inout[i] = uio_oe[i] ? uio_out[i] : 1'bz;
     endgenerate
-    assign uio_out = uio_inout;
+    assign uio_in = uio_inout;
 
     // Invert reset to project, and halve the clock
 

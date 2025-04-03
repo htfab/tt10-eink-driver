@@ -333,9 +333,11 @@ Step 3:  Apply application code and write the display pixels to SRAM.
 		(SRAM_CS) command = 0x02 addr = 0x00 0x00 data = ...
 
 Step 4:  Do display HW reset (pulse reset pin low 10ms)
+	 This brings the display out of deep sleep mode
 		(RST)
 Step 5:  Do display SW reset (command 0x12)
 		(EPD_CS) command = 0x12, no data
+		wait for busy signal to go low
 	 	wait 10ms
 Step 6:  Initialize (Suggested: Commands 0x01, 0x11, 0x44, 0x45, 0x3c)
 			(DRIVER_CONTROL, DATA_MODE, RAMXPOS, RAMYPOS, BORDER)
@@ -399,3 +401,46 @@ NOTE:  Conclusion for the Tamagotchi project is:
     image data will quickly exceed the Tiny Tapeout area.
 (3) Therefore, use the SRAM + NVRAM PMOD for data storage and image
     storage, and use the eInk display only for the eInk display.
+
+----------------------------------------------------
+For reference, the Adafruit driver sequence is the following:
+
+    Adafruit_EPD::display()
+
+	Adafruit_SSD1680::powerUp()
+		hardwareReset();
+			RSTB->1		// Not needed
+			delay(10)	// Not needed?
+			RSTB->0
+			delay(10)
+			RSTB->1
+			delay(10)
+		delay(100);		// Not needed?
+		busy_wait();		// Not needed?
+		EPD_commandList(init_code)
+			EPD_command(SSD1680_SW_RESET=0x12)
+			busy_wait()
+			EPD_command(SSD1680_DATA_MODE=0x11, ...)
+			EPD_command(SSD1680_WRITE_BORDER=0x3c, ...)
+			EPD_command(SSD1680_WRITE_VCOM=0x2c, ...)
+			EPD_command(SSD1680_GATE_VOLTAGE=0x03, ...)
+			EPD_command(SSD1680_SOURCE_VOLTAGE=0x04, ...)
+			EPD_command(SSD1680_SET_RAMXCOUNT=0x4e, ...)
+			EPD_command(SSD1680_SET_RAMYCOUNT=0x4f, ...)
+		EPD_command(SSD1680_SET_RAMXPOS=0x44, ...)
+		EPD_command(SSD1680_SET_RAMYPOS=0x45, ...)
+		EPD_command(SSD1680_DRIVER_CONTROL=0x01, ...)
+
+	setRAMAddress(0, 0)
+	writeSRAMFramebufferToEPD()
+		Adafruit_SSD1680::writeRAMCommand()
+			EPD_command(SSD1680_WRITE_RAM1=0x24, ...)
+
+	Adafruit_SSD1680::update()
+		EPD_command(SSD1680_DISP_CTRL2=0x22, ...)
+		EPD_command(SSD1680_MASTER_ACTIVATE=0x20, ..)
+		busy_wait();
+
+	Adafruit_SSD1680::powerDown()
+		EPD_command(SSD1680_DEEP_SLEEP=0x10, ...)
+

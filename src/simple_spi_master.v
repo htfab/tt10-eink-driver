@@ -77,29 +77,30 @@
 //--------------------------------------------------------------------
 
 module simple_spi_master (
-    input        resetn,
-    input        clk,	 // master clock (assume 100MHz)
+    input wire   resetn,
+    input wire   clk,	 // master clock (assume 100MHz)
 
-    input  [7:0] prescaler,	// Prescaler value
-    input      invsck;		// Inverted SCK
-    input      invcsb;		// Inverted CSB
-    input      mlb;		// msb/lsb first
-    input      stream;		// Stream mode
-    input      mode;		// SCK edge
-    input      enable;		// Enable/disable
+    input wire [7:0] prescaler,	// Prescaler value
+    input wire     invsck,		// Inverted SCK
+    input wire     invcsb,		// Inverted CSB
+    input wire     mlb,		// msb/lsb first
+    input wire     stream,		// Stream mode
+    input wire     mode,		// SCK edge
+    input wire     enable,		// Enable/disable
 
-    input  	 reg_dat_we,	// Write enable
-    input  	 reg_dat_re,	// Read enable
-    input  [7:0] reg_dat_di,	// Data in (8 bits)
-    output [7:0] reg_dat_do,	// Data out (8 bits)
-    output	 reg_dat_wait,	// Busy
+    input wire 	 	reg_dat_we,	// Write enable
+    input wire 	 	reg_dat_re,	// Read enable
+    input wire [7:0] 	reg_dat_di,	// Data in (8 bits)
+    output wire [7:0] 	reg_dat_do,	// Data out (8 bits)
+    output wire	 	reg_dat_wait,	// Busy
 
-    output	 err_out,	// Error condition
+    output reg	 err_out,	// Error condition
 
-    input 	 sdi,	 // SPI input
-    output 	 csb,	 // SPI chip select
-    output 	 sck,	 // SPI clock
-    output 	 sdo	 // SPI output
+    input  wire	 sdi,	 // SPI input
+    output wire	 csb,	 // SPI chip select
+    output wire	 sck,	 // SPI clock
+    output reg	 sdo,	 // SPI output
+    output wire  sdoenb  // SPI output enable (sense negative)
 );
 
     parameter IDLE   = 2'b00;	    
@@ -108,44 +109,31 @@ module simple_spi_master (
     parameter FINISH = 2'b11; 
 
     reg	      done;
-    reg       isdo, hsck, icsb;
+    reg       hsck, icsb;
     reg [1:0] state;
     reg       isck;
-    reg	      err_out;
  
     reg [7:0] treg, rreg, d_latched;
     reg [2:0] nbit;
     reg [7:0] count;
-
-    wire      invsck;
-    wire      invcsb;
-    wire      mlb;
-    wire      stream;
-    wire      mode;
-    wire      enable;
- 
-    wire      csb;
-    wire      sck;
-    wire      sdo;
-    wire      sdoenb;
 
     // Define behavior for inverted SCK and inverted CSB
     assign    	  csb = (enable == 1'b0) ? 1'bz : (invcsb) ? ~icsb : icsb;
     assign	  sck = (enable == 1'b0) ? 1'bz : (invsck) ? ~isck : isck;
 
     // No bidirectional 3-pin mode defined, so SDO is enabled whenever CSB is low.
-    assign	  sdoenb = icsb;
-    assign	  sdo = (enable == 1'b0) ? 1'bz : isdo;
+    assign	  sdoenb = (enable == 1'b0) ? 1'b1 : icsb;
 
     assign reg_dat_wait = ~done;
     assign reg_dat_do = done ? rreg : ~0;
 
     // Watch for read and write enables on clk, not hsck, so as not to
-    // miss them.
+    // miss them.  Change on clk negative edge, so signal is established
+    // before the rising edge of hclk.
 
     reg w_latched, r_latched;
 
-    always @(posedge clk or negedge resetn) begin
+    always @(negedge clk or negedge resetn) begin
         if (resetn == 1'b0) begin
 	    err_out <= 1'b0;
             w_latched <= 1'b0;
@@ -210,6 +198,7 @@ module simple_spi_master (
 	    end else if (state == SENDH) begin
 	        nbit <= nbit + 1;
                 if (nbit == 3'd7) begin
+		    done <= 1'b1;
 		    state <= FINISH;
 	        end else begin
 	            state <= SENDL;
@@ -261,7 +250,7 @@ module simple_spi_master (
         if (resetn == 1'b0) begin
 	    rreg <= 8'hff;
 	    treg <= 8'hff;
-	    isdo <= 1'b0;
+	    sdo <= 1'b0;
         end else begin 
 	    if (isck == 1'b0 && (state == SENDL || state == SENDH)) begin
 	        if (mlb == 1'b1) begin
@@ -275,21 +264,21 @@ module simple_spi_master (
 
             if (w_latched == 1'b1) begin
 	        if (mlb == 1'b1) begin
-		    treg <= {1'b1, d_latched[7:1]};
-		    isdo <= d_latched[0];
+		    treg <= {d_latched[7], d_latched[7:1]};
+		    sdo <= d_latched[0];
 	        end else begin
-		    treg <= {d_latched[6:0], 1'b1};
-		    isdo <= d_latched[7];
+		    treg <= {d_latched[6:0], d_latched[0]};
+		    sdo <= d_latched[7];
 	        end // mlb
 	    end else if ((mode ^ isck) == 1'b1) begin
 	        if (mlb == 1'b1) begin
 		    // LSB first, shift right
-		    treg <= {1'b1, treg[7:1]};
-		    isdo <= treg[0];
+		    treg <= {treg[7], treg[7:1]};
+		    sdo <= treg[0];
 	        end else begin
 		    // MSB first shift LEFT
-		    treg <= {treg[6:0], 1'b1};
-		    isdo <= treg[7];
+		    treg <= {treg[6:0], treg[0]};
+		    sdo <= treg[7];
 	        end // mlb
 	    end // write on mode ^ isck
         end // resetn

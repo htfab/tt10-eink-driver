@@ -1,6 +1,7 @@
 --------------------------------------------------------
 Files to make the TinyTapeout project compatible with a
-Digilent Arty A7-35T FPGA development board
+Digilent Arty A7-35T FPGA development board or
+Digilent Arty S7-50 FPGA development board
 --------------------------------------------------------
 Note that the Arty A7 runs at 100MHz while the TinyTapeout
 project is expected to top out at 50MHz.  This is taken
