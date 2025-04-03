@@ -336,12 +336,20 @@ module tt_um_rte_eink_driver (
 		end
 
 		`START4 : begin
-		    if (inval[0] == 1'b1) data_out <= 8'h00;		// White
-		    else if (inval[1] == 1'b1) data_out <= 8'hff;	// Black
+		    if (inval[0] == 1'b1) data_out <= 8'hff;		// White
+		    else if (inval[1] == 1'b1) data_out <= 8'h00;	// Black
 		    else if (inval[2] == 1'b1) begin
-			data_out <= counter[8];				// Diagonal
+			data_out <= {8{counter[7]}};			// V Stripes
 		    end else if (inval[3] == 1'b1) begin
-			data_out <= counter[8] ^ counter[9];		// Checkerboard
+			data_out <= {8{counter[0]}};			// H Stripes
+		    end else if (inval[4] == 1'b1) begin
+			data_out <= {8{counter[0] ^ counter[6]}};	// Checker
+		    end else if (inval[5] == 1'b1) begin
+			data_out <= {8{counter[1] ^ counter[7]}};	// Checker
+		    end else if (inval[6] == 1'b1) begin
+			data_out <= {8{counter[2] ^ counter[8]}};	// Checker
+		    end else if (inval[7] == 1'b1) begin
+			data_out <= {8{counter[3] ^ counter[9]}};	// Checker
 		    end
 		    state <= `WRITE4;
 		end
