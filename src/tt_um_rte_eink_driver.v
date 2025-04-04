@@ -47,6 +47,9 @@ module tt_um_rte_eink_driver (
     reg  [7:0] inbuf;	// Buffered inputs
     reg  [7:0] inval;	// Double-buffered inputs
 
+    wire [4:0] xpos;
+    wire [3:0] ypos;
+
     // Output assignment (see the README file)
     assign uo_out  = 8'b0;	// Only the bidirectional port is used
     assign uio_out = {dcb, 1'b0, resetb, 1'b1, sck, 1'b0, mosi, csb};
@@ -58,6 +61,11 @@ module tt_um_rte_eink_driver (
 
     // List all unused inputs to prevent warnings
     wire _unused = &{ena, 1'b0};
+
+    // Convenience function for pulling X and Y values for a coarse
+    // 32 x 16 grid out of the counter values.
+    assign xpos = counter[11:7];
+    assign ypos = counter[3:0];
 
     /* SPI write operation:
      * (1) Set "data_out" to the byte value to send
@@ -336,6 +344,21 @@ module tt_um_rte_eink_driver (
 		end
 
 		`START4 : begin
+		    /* Display pattern definitions
+		     * Note that the display is vertical and the demo board
+		     * is silkscreened such that the display is in a horizontal
+		     * orientation when the text is facing up.  So data appears
+		     * on the display as running top to bottom and right to left.
+		     * The height of the display is then 122 which maps to 128
+		     * bits in memory with the last 6 bits unused, or 16 bytes.
+		     * So counter[3:0] (4 bits) is the Y position, in bytes, and
+		     * counter[11:4] (8 bits) is the X position,in bits.  A grid
+		     * of 32 x 16 can be addressed by Y = counter[3:0], X =
+		     * counter[11:7], byte value is always either 0x00 or 0xff,
+		     * and the same value must repeat over all values of
+		     * counter[6:4].
+		     */
+
 		    if (inval[0] == 1'b1) data_out <= 8'hff;		// White
 		    else if (inval[1] == 1'b1) data_out <= 8'h00;	// Black
 		    else if (inval[2] == 1'b1) begin
@@ -343,13 +366,48 @@ module tt_um_rte_eink_driver (
 		    end else if (inval[3] == 1'b1) begin
 			data_out <= {8{counter[0]}};			// H Stripes
 		    end else if (inval[4] == 1'b1) begin
-			data_out <= {8{counter[0] ^ counter[6]}};	// Checker
+			data_out <= {8{counter[0] ^ counter[6]}};	// Checker S
 		    end else if (inval[5] == 1'b1) begin
-			data_out <= {8{counter[1] ^ counter[7]}};	// Checker
+			data_out <= {8{counter[1] ^ counter[7]}};	// Checker M
 		    end else if (inval[6] == 1'b1) begin
-			data_out <= {8{counter[2] ^ counter[8]}};	// Checker
+			data_out <= {8{counter[2] ^ counter[8]}};	// Checker L
 		    end else if (inval[7] == 1'b1) begin
-			data_out <= {8{counter[3] ^ counter[9]}};	// Checker
+			// data_out <= {8{counter[3] ^ counter[9]}};	// Checker XL
+
+			// Demonstration of a drawn pattern on a 32 x 16 coarse grid
+			// Note: xpos = counter[11:7], ypos = counter[3:0]
+			case (ypos)
+			    0, 15:
+				data_out <= (xpos >= 14 && xpos <= 18) ? 8'h00 : 8'hff;
+			    1, 14:
+				data_out <= (xpos == 12 || xpos == 13 ||
+					     xpos == 19 || xpos == 20) ? 8'h00 : 8'hff;
+			    2, 13:
+				data_out <= (xpos == 11 || xpos == 21) ? 8'h00 : 8'hff;
+			    3:
+				data_out <= (xpos == 10 || xpos == 22) ? 8'h00 : 8'hff;
+			    4, 5:
+				data_out <= (xpos == 9 || xpos == 14 ||
+					     xpos == 18 || xpos == 23) ? 8'h00 : 8'hff;
+			    6:
+				data_out <= (xpos == 8 || xpos == 14 ||
+					     xpos == 18 || xpos == 24) ? 8'h00 : 8'hff;
+			    7, 8:
+				data_out <= (xpos == 8 || xpos == 24) ? 8'h00 : 8'hff;
+			    9:
+				data_out <= (xpos == 8 || xpos == 11 ||
+					     xpos == 21 || xpos == 24) ? 8'h00 : 8'hff;
+			    10:
+				data_out <= (xpos == 9 || xpos == 12 ||
+					     xpos == 20 || xpos == 23) ? 8'h00 : 8'hff;
+			    11:
+				data_out <= (xpos == 9 || xpos == 23 ||
+					     xpos == 13 || xpos == 14 ||
+					     xpos == 18 || xpos == 19) ? 8'h00 : 8'hff;
+			    12:
+				data_out <= (xpos == 10 || xpos == 22 ||
+					    (xpos >= 15 && xpos <= 17)) ? 8'h00 : 8'hff;
+			endcase
 		    end
 		    state <= `WRITE4;
 		end
