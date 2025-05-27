@@ -3,13 +3,11 @@
 *.vcd
 runs
 tt_submission
-src/a.out
 src/user_config.json
 src/config_merged.json
 test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
-fpga/tt10_eink_driver
-fpga/tt10_eink_driver_s7
-fpga/tt10_eink_driver_a7
+fpga/ttihp_eink_driver/
+fpga/vivado*
